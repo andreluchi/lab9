@@ -1,0 +1,720 @@
+---
+title: "Lab2"
+author: "Rene Ventura, Andres Paiz"
+date: "8/5/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+##Analisis exploratorio
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggthemes)
+library(epiDisplay)
+library(forecast)
+library(tseries)
+library(fUnitRoots)
+library(ggfortify)
+library("xts")
+library(tsbox)
+library(ggplot2)
+
+consumo <- read.csv("DatosConsumoCombustibles.csv")
+importacion <- read.csv("DatosImportacionCombustibles.csv")
+
+
+```
+
+### Consumo Dataset
+```{r Graficas1 consumo, echo=FALSE}
+str(consumo)
+```
+
+Histograma de variables del dataset. 
+
+```{r hist consumo, echo=FALSE}
+hist(x= consumo$X, main=paste("Histograma de X"))
+hist(x= consumo$Anio, main=paste("Histograma de Anio"))
+tab1(consumo$Anio, sort.group = "decreasing")
+hist(x= consumo$Mes, main=paste("Histograma de Mes"))
+hist(x= consumo$GasolinaSuper, main=paste("Histograma de GasolinaSuper"))
+hist(x= consumo$GasolinaRegular, main=paste("Histograma de GasolinaRegular"))
+hist(x= consumo$TotalGasolinas, main=paste("Histograma de TotalGasolinas"))
+hist(x= consumo$Diesel, main=paste("Histograma de Diesel"))
+hist(x= consumo$DieselLS, main=paste("Histograma de DieselLS"))
+hist(x= consumo$DieselULS, main=paste("Histograma de DieselULS"))
+hist(x= consumo$TotalDiesel, main=paste("Histograma de TotalDiesel"))
+hist(x= consumo$GLP, main=paste("Histograma de GLP"))
+hist(x= consumo$GasolinaAviacion, main=paste("Histograma de GasolinaAviacion"))
+hist(x= consumo$Kerosina, main=paste("Histograma de Kerosina"))
+hist(x= consumo$TurboJet, main=paste("Histograma de TurboJet"))
+hist(x= consumo$Bunker, main=paste("Histograma de Bunker"))
+hist(x= consumo$Asfalto, main=paste("Histograma de Asfalto"))
+hist(x= consumo$PetCoke, main=paste("Histograma de PetCoke"))
+hist(x= consumo$AceitesLubricantes, main=paste("Histograma de AceitesLubricantes"))
+hist(x= consumo$GrasasLubricantes, main=paste("Histograma de GrasasLubricantes"))
+hist(x= consumo$Solventes, main=paste("Histograma de Solventes"))
+hist(x= consumo$Naftas, main=paste("Histograma de Naftas"))
+hist(x= consumo$Ceras, main=paste("Histograma de Ceras"))
+hist(x= consumo$CrudoNacional, main=paste("Histograma de CrudoNacional"))
+hist(x= consumo$Butano, main=paste("Histograma de Butano"))
+hist(x= consumo$Orimulsion, main=paste("Histograma de Orimulsion"))
+hist(x= consumo$MezclasOleosas, main=paste("Histograma de MezclasOleosas"))
+hist(x= consumo$Total, main=paste("Histograma de Total"))
+
+```
+
+
+Variable mes: No sigue una distribución normal.
+
+Variable Gasolina Super: No sigue una distribución normal. 
+
+Variable Gasolina Regular: No sigue una distribución normal. 
+
+Variable Gasolina Diesel: Si sigue una distribución normal. 
+
+####Cruce de variables 
+cruce de las variables gasolinaSuper, Regular y Diesel en base al anio.
+
+```{r cruce de variables, echo=FALSE}
+plot(y=consumo$GasolinaSuper,x=consumo$Anio,ylab="Gasolina Super", xlab="Anio")
+ggplot(consumo, aes(Anio,GasolinaSuper))+geom_point(color="red",show.legend = FALSE)
+
+```
+De este cruce de variables se puede observar la tendencia a la alta del cosumo de combustible.
+
+```{r echo=FALSE}
+plot(y=consumo$GasolinaRegular,x=consumo$Anio,ylab="Gasolina Regular", xlab="Anio")
+plot(y=consumo$TotalDiesel,x=consumo$Anio,ylab="Gasolina Diesel", xlab="Anio")
+```
+La gasolina regular mantiene su comportamiento a lo largo de los anios pero con el diesel es de una manera irregular
+
+cruce de variables con meses.
+```{r}
+library(ggridges)
+library(plotly)
+plot(y=consumo$GasolinaSuper,x=consumo$Mes,ylab="Gasolina Super", xlab="Mes")
+plot(y=consumo$GasolinaRegular,x=consumo$Mes,ylab="Gasolina Regular", xlab="Mes")
+plot(y=consumo$TotalDiesel,x=consumo$Mes,ylab="Gasolina Diesel", xlab="Mes")
+tt<-data.frame(year=consumo$Anio,super=consumo$GasolinaSuper,regular=consumo$GasolinaRegular,diesel=consumo$Diesel,total=consumo$GasolinaSuper+consumo$GasolinaRegular+consumo$Diesel)
+library(dplyr)
+tt2<-tt %>% mutate(decade = floor(year/1)*1) %>% 
+      group_by(decade) %>% 
+      summarize_all(sum) %>% 
+      select(-year)
+ggplot(tt, aes(x = year)) +
+   ggtitle("Total de consumo (en galones) de gasolina 2000-2021")+
+   geom_bar(aes( y = total),stat = "identity",fill = "#6DDAFF") +
+   labs(x = "Year", y = "Total consumption(Gl")+theme_solarized_2(light = FALSE)+theme(axis.title = element_text(colour="white"),title = element_text(colour="white"), text=element_text(colour = "white"))
+colors <- c('rgb(255, 43, 52)', 'rgb(34, 116, 165)', 'rgb(241, 196, 15)')
+
+fig2 <- plot_ly(
+
+  x = tt$year,
+
+  y = tt$total,
+
+  name = "Gasolina",
+
+  type = "bar"
+  
+
+)
+
+
+
+fig2<- fig2 %>% layout(title = "Consumo de Combustible(2000-2021)",
+
+         xaxis = list(title = "Years"),
+
+         yaxis = list (title = "CONSUMPTION(Gl)"))
+
+
+fig2
+
+
+tt<-data.frame(diesel=consumoDiesel$cantDiesel, super= consumo$GasolinaSuper, regular= consumo$GasolinaRegular)
+ff<-colSums(tt)
+ff[1]
+labels = c('Diesel','Regular','Super')
+values = c(ff[1], ff[2], ff[3])
+
+fig1 <- plot_ly(type='pie', labels=labels, values=values, 
+               textinfo='label+percent',
+               insidetextorientation='radial',
+                marker = list(colors = colors,
+
+                      line = list(color = '#FFFFFF', width = 1))
+               
+               )
+
+
+fig1<- fig1 %>% layout(title = "% de consumo de tipos de combustible")
+
+
+fig1
+
+
+
+
+
+
+```
+
+
+
+### Analisis de la data de Importacion
+
+Breve resumen del data set de importaciones
+```{r echo=FALSE}
+print("Dimensiones")
+dim(importacion)
+print("Resumen")
+summary(importacion)
+print("Estructura")
+str(importacion)
+
+```
+
+
+Histograma de variables continuas.
+```{r BloqueDeHistogramas, echo=FALSE}
+hist(x= importacion$Anio, main=paste("Histograma de Anio"))
+hist(x= importacion$Mes, main=paste("Histograma de Mes"))
+hist(x= importacion$GasolinaSuper, main=paste("Histograma de Gasolina Super"))
+hist(x= importacion$GasolinaRegular, main=paste("Histograma de Gasolina Regular"))
+hist(x= importacion$TotalGasolinas, main=paste("Histograma de Gasolinas Totales"))
+hist(x= importacion$Diesel, main=paste("Histograma de Diesel "))
+hist(x= importacion$DieselLS, main=paste("Histograma de Diesel LS"))
+hist(x= importacion$DieselULS, main=paste("Histograma de Diesel ULS"))
+hist(x= importacion$TotalDiesel, main=paste("Histograma de Diesel Total"))
+
+
+```
+GasolinaSuper, TotalGasolinas, Diesel y TotalDiesel siguen una distribución normal.
+
+
+Cruze de variables con el anio y mes
+```{r CruzeDeVariables, echo=FALSE}
+plot(y=importacion$GasolinaSuper,x=importacion$Anio,ylab="Gasolina Super", xlab="Anio")
+plot(y=importacion$GasolinaRegular,x=importacion$Anio,ylab="Gasolina Regular", xlab="Anio")
+plot(y=importacion$TotalDiesel,x=importacion$Anio,ylab="Gasolina Total Diese", xlab="Anio")
+plot(y=importacion$GasolinaSuper,x=importacion$Mes,ylab="Gasolina Super", xlab="Meses")
+plot(y=importacion$GasolinaRegular,x=importacion$Mes,ylab="Gasolina Regular", xlab="Meses")
+plot(y=importacion$TotalDiesel,x=importacion$Mes,ylab="Gasolina Diesel", xlab="Meses")
+
+
+```
+
+Al observar las gráficas del cruce de variables de cualquier tipo de gasolina con los meses, no se puede observar alguna tendencia. Esto implica que sin importar el mes, siempre va a haber una importación de combustible más o menos constante.
+
+
+
+
+
+En el analisis de series de tiempo, la columna de mes y anio deben estar unidas. Por eso se crearon los respectivos datasets para poder proseguir con las series.
+```{r Serie, echo=FALSE}
+consumo$Dia <- 1
+consumo$Date <- as.Date(with(consumo, paste(Anio, Mes, Dia,sep="-")), "%Y-%m-%d")
+
+cantSuper <- c(consumo$GasolinaSuper)
+superDate <- c(consumo$Date)
+consumoSuper <- data.frame(cantSuper,superDate)
+
+cantRegular <- c(consumo$GasolinaRegular)
+regularDate <- c(consumo$Date)
+consumoRegular <- data.frame(cantRegular,regularDate)
+
+cantDiesel <- c(consumo$TotalDiesel)
+dieselDate <- c(consumo$Date)
+consumoDiesel <- data.frame(cantDiesel,dieselDate)
+
+```
+
+
+
+
+####Linea de tiempo para consumo de gasolina super
+inicio, fin, frecuencia y vista de la linea del tiempo.
+```{r echo=FALSE}
+consumoGS_ts <- xts(consumoSuper$cantSuper, consumoSuper$superDate) 
+consumoGS_ts <-ts_ts(consumoGS_ts)
+res <- data.frame(as.matrix(consumoGS_ts), date=time(consumoGS_ts))
+train <- head(consumoGS_ts, round(length(consumoGS_ts) * 0.7))
+h <- length(consumoGS_ts) - length(train)
+test <- tail(consumoGS_ts, h)
+print(consumoGS_ts)
+start(consumoGS_ts)
+end(consumoGS_ts)
+
+frequency(consumoGS_ts)
+
+ggplot(res, aes(x = res$date, y = res$as.matrix.consumoGS_ts.)) +
+  geom_line( color="#16FC90",lwd = .5) +
+  labs(x = "Year", y = "CONSUMPTION(Gl)") +
+  ggtitle("Consumo de Gasolina(2000-2021)") +
+  theme_solarized_2(light = FALSE)   + scale_colour_solarized()+theme(axis.title = element_text(colour="white"),title = element_text(colour="white"), text=element_text(colour = "white"))
+
+
+fig5 <- plot_ly(res, x = ~date, y = ~as.matrix.consumoGS_ts., name = 'consumo', type = 'scatter', mode = 'lines', line=list(color="rgb(0, 204, 102)", width=2)) 
+
+fig5<- fig5 %>% layout(title = "Consumo de Gasolina Super(2000-2021)",
+
+         xaxis = list(title = "Years"),
+
+         yaxis = list (title = "CONSUMPTION(Gl)"))
+
+
+
+fig5
+
+
+```
+En lo obtenido se puede observar que la tendencia de la gasolina super, del 2000 al 2019 se mantenia a la alta, pero luego de la pandemia hubo una caida fuerte en el consumo de gasolina. Luego de 2020 se entra en la "nueva normalidad" en donde claramente se ven los eventos de la inflacion en estos ultimos 2 anios.
+
+#####Descomposicion de la serie
+```{r echo=FALSE}
+dec.GS<-decompose(consumoGS_ts)
+plot(dec.GS)
+```
+
+Podemos observar una serie con tendencia a aumentar, no es estacionaria en varianza y tiene estacionalidad.
+
+inicio y fin del train y del test
+```{r echo=FALSE}
+
+start(train)
+end(train)
+start(test)
+end(test)
+```
+
+
+#####Estimar los parámetros del modelo.
+Se realiza una transformacion logaritmica para volver estacionaria la varianza
+```{r include=FALSE}
+logGS <- log(train)
+lambda <- BoxCox.lambda(train)
+boxcoxGS<-BoxCox(train,lambda)
+```
+
+
+
+```{r echo=FALSE}
+plot(decompose(logGS))
+plot(logGS)
+```
+Se puede observar que la varianza se volvio mas constante, pero aun existen picos.
+
+ estacionarizar en normalidad.
+```{r echo=FALSE}
+adfTest(train)
+unitrootTest(train)
+
+```
+Ambas pruebas de Dickey-Fuller Test nos demuestra que p es mayor a 0.05 por lo que no es posible rechazar Ho, y por ende, asumir que no hay raices unitarias. Por lo que la serie de tiempo no es estacionaria en media. 
+
+Diferenciacion en la serie.
+```{r echo=FALSE}
+GS_diff<-diff(logGS)
+adfTest(diff(train))
+```
+ p es menor a 0.05 por lo que se puede descartar la hipótesis nula de que existan raices unitarias. 
+
+Solo se hizo uso de una diferenciación, por lo que d es 1, pero para conocer p y q se debe de realizar un gráfico de autocorrelación y autocorrelación parcial.
+```{r}
+acf(logGS,50) 
+pacf(logGS,50) 
+
+```
+
+En el grafico ACF se observa que se tiene un decrecimiento rapido. En el PACF el decrecimiento se detiene luego de 1, por lo tanto q=1 y P no se anula en ningun momento entonces, p= 4 y d=1. 
+
+
+
+
+```{r echo=FALSE}
+decTrain <- decompose(train)
+plot(decTrain$seasonal)
+```
+
+
+ACF y PACF con 24
+
+```{r echo=FALSE}
+Acf(diff(logGS),24)
+Pacf(diff(logGS),24)
+
+```
+
+
+AutoArima y Arima con p=2 q=1 y d=1
+```{r echo=FALSE}
+fitArima <- arima(logGS,order=c(1,1,2),seasonal = c(2,1,1))
+
+fitAutoArima <- auto.arima(train)
+library(lmtest)
+coeftest(fitArima)
+coeftest(fitAutoArima)
+
+```
+
+ todos los coeficientes son significativos 
+
+###Análisis de Residuales
+
+
+```{r echo=FALSE}
+qqnorm(fitArima$residuals)
+checkresiduals(fitArima)
+
+```
+
+ El p-value es mayor a 0.05, por lo que no se puede rechazar la hipótesis nula. Esto significa que el modelo generado es aceptable para predecir.
+
+Residuals de AutoArima
+
+```{r echo=FALSE}
+qqnorm(fitAutoArima$residuals)
+qqline(fitAutoArima$residuals)
+checkresiduals(fitAutoArima)
+
+```
+
+El p-value es menor a 0.05 por lo que no es aceptable para predecir. 
+
+##Predicción con el modelo ARIMA
+
+```{r echo=FALSE}
+fitArima %>%
+  forecast(h) 
+plot(forecast(fitArima,h))
+```
+
+El modelo mantiene la tendencia, pero en la prediccion de los datos no se ve acertada.
+
+###Prophet algoritmo de FB
+```{r echo=FALSE}
+
+library(Rcpp)
+
+library(rlang)
+library(zoo)
+library(prophet)
+
+df<-data.frame(ds=as.Date(as.yearmon(time(train))),y=as.matrix(train) )
+testdf<-data.frame(ds=as.Date(as.yearmon(time(test))),y=as.matrix(test) )
+fitProphet<-prophet(df,yearly.seasonality = T,weekly.seasonality = T)
+future <- make_future_dataframe(fitProphet,periods = h,freq = "month", include_history = T)
+p <- predict(fitProphet,future)
+p<-p[,c("ds","yhat","yhat_lower","yhat_upper")]
+plot(fitProphet,p)
+```
+
+
+Se comparan los datos reales, representados en rojo y los datos predichos, representados en azul.
+
+
+```{r echo=FALSE}
+pred<-tail(p,h)
+pred$y<-testdf$y
+
+
+ggplot(pred, aes(x=ds, y=yhat))+ 
+                            
+  ggtitle("Prediccion del Consumo de Gasolina") + 
+   geom_line(color="#36F89E", size=1, alpha=1) +
+   geom_ribbon(aes(ymin=yhat_lower, ymax=yhat_upper), fill="#36F89E", alpha=0.3) +
+   geom_line(size= 1,data=pred, aes(x=ds, y=y),color="#E059FF",alpha=1)+labs(x = "Year", y = "CONSUMPTION(Gl)") +theme_solarized_2(light = FALSE)+theme(text = element_text(colour = "white"),title =element_text(colour = "white"),axis.title = element_text(colour = "white") )
+
+ac<-((pred$y-pred$yhat)/pred$y)/nrow(pred)
+ac2<-as.data.frame(ac)
+
+
+fig4 <- plot_ly(pred, x = ~ds, y = ~yhat, name = 'predict', type = 'scatter', mode = 'lines', line=list(color = "rgb(255, 43, 52)", width=3)) 
+
+fig4 <- fig4 %>% add_trace(y = ~y, name = 'real', mode = 'lines', line=list(color="rgb(34, 116, 165)",width=3)) 
+
+#fig <- fig %>% add_trace(y = ~trace_2, name = 'trace 2', mode = 'markers')
+
+fig4<- fig4 %>% layout(title = "Prediccion del Consumo de Gasolina Super utilizando prophet algorithm",
+
+         xaxis = list(title = "Years"),
+
+         yaxis = list (title = "CONSUMPTION(Gl)"))
+
+
+fig4
+
+```
+
+Prophet tiene menos precision que ARIMA como se puede observar en el grafico.
+
+##Prediccion de los ultimos 3 años con Arima y Prophet
+```{r}
+train <- head(consumoGS_ts, round(length(consumoGS_ts) * 0.891632653))
+h <- length(consumoGS_ts) - length(train)
+test <- tail(consumoGS_ts, h)
+end(train)
+fitArima %>%
+  forecast(h) 
+plot(forecast(fitArima,h))
+df<-data.frame(ds=as.Date(as.yearmon(time(train))),y=as.matrix(train) )
+testdf<-data.frame(ds=as.Date(as.yearmon(time(test))),y=as.matrix(test) )
+fitProphet<-prophet(df,yearly.seasonality = T,weekly.seasonality = T)
+future <- make_future_dataframe(fitProphet,periods = h,freq = "month", include_history = T)
+p <- predict(fitProphet,future)
+p<-p[,c("ds","yhat","yhat_lower","yhat_upper")]
+plot(fitProphet,p)
+pred<-tail(p,h)
+pred$y<-testdf$y
+
+
+ggplot(pred, aes(x=ds, y=yhat)) +
+   geom_line(size=1, alpha=0.8) +
+   geom_ribbon(aes(ymin=yhat_lower, ymax=yhat_upper), fill="blue", alpha=0.2) +
+   geom_line(data=pred, aes(x=ds, y=y),color="red")
+
+```
+
+En la grafica de los ultimos tres anios podemos ver que fue accurate su predccion con un bajon de consumo de gasolina a mediados de 2020.
+
+
+
+
+
+#### Serie de tiempo Gasolina Super Importacion
+
+
+
+```{r UnionColumnasSuper, echo=FALSE}
+
+
+datosImport <- read.csv(file = 'DatosImportacionCombustibles.csv')
+datosImport$Dia <- 1
+datosImport$Date <- as.Date(with(datosImport, paste(Anio, Mes, Dia,sep="-")), "%Y-%m-%d")
+
+cantSuper <- c(datosImport$GasolinaSuper)
+superDate <- c(datosImport$Date)
+importSuper <- data.frame(cantSuper,superDate)
+
+
+
+```
+
+ incio, fin y frencuencia
+
+```{r CreandoSerieSuper, echo=FALSE}
+
+importSuper_ts <- xts(importSuper$cantSuper, importSuper$superDate) 
+importSuper_ts <-ts_ts(importSuper_ts)
+
+
+start(importSuper_ts)
+end(importSuper_ts)
+frequency(importSuper_ts)
+
+trainS <- head(importSuper_ts, round(length(importSuper_ts) * 0.7))
+hS <- length(importSuper_ts) - length(trainS)
+testS <- tail(importSuper_ts, hS)
+
+
+```
+
+Creando el grafico de la serie
+
+```{r GraficaSerieSuper, echo=FALSE}
+
+plot(importSuper_ts)
+abline(reg=lm(importSuper_ts~time(importSuper_ts)), col=c("red"))
+
+
+```
+
+Se observa que es una serie de tiempo no estacionaria ya que su componente tendencia no es constante, si no que es creciente. A
+
+
+Descomponiendo la serie
+
+```{r DescomposicionSuper, echo=FALSE}
+dec.GS<-decompose(importSuper_ts)
+plot(dec.GS)
+
+```
+
+Se puede observar que la componente tendencia es creciente, la componente estacional si tiene un patron y la varianza no es constante.
+
+Transformacion logaritmica para estacionar serie
+
+```{r}
+logSS <- log(trainS)
+lambda <- BoxCox.lambda(trainS)
+boxcoxGR<-BoxCox(trainS,lambda)
+
+plot(decompose(logSS))
+plot(logSS)
+
+
+```
+
+
+ pruebas de DickeyFuller
+
+```{r}
+adfTest(trainS)
+unitrootTest(trainS)
+```
+
+se observa que p es mayor a 0.05. No se puede rechazar Ho y existen raices unitarias. 
+
+
+diferenciacion en la serie de tiempo
+
+```{r}
+GS_diff<-diff(logSS)
+adfTest(diff(trainS))
+```
+
+Ahora el valor p si es menor a 0.05. Ahora si se puede rechazar la Ho, y ahora no hay raices unitarias
+
+
+
+Valores de p y q
+
+```{r valPQ, echo=FALSE}
+acf(logSS,50) 
+pacf(logSS,50)
+```
+p=1, q=1, d=1
+
+
+Valores p y q del la componente estacional
+
+
+
+Utilizando ARIMA
+
+```{r arima, echo=FALSE}
+library(lmtest)
+fitArima <- arima(logSS,order=c(1,1,1),seasonal=c(1,1,1))
+fitAutoArima <- auto.arima(trainS)
+
+coeftest(fitArima)
+coeftest(fitAutoArima)
+```
+
+Como se puede observar, los coeficientes son significativos.
+
+
+
+ ###analisis de los residuales
+
+```{r analisisResiduales, echo=FALSE}
+
+qqnorm(fitArima$residuals)
+qqline(fitArima$residuals)
+checkresiduals(fitArima)
+
+```
+
+ya que p value es mayor a 0.05 es un modelo apto para predecir.
+
+
+
+PREDICCION CON ARIMA
+
+```{r prediccion, echo=FALSE}
+
+fitArima %>%
+  forecast(hS) 
+ plot(forecast(fitArima,hS))
+
+
+```
+
+Se puede observar que el algoritmo pudo predecir la tendencia, sin embargo, no pudo predecir los datos.
+
+
+
+
+#### Analisis con profet de facebook gasolina super importacion
+
+```{r prophet, echo=FALSE}
+library(Rcpp)
+library (rlang)
+library(prophet)
+library
+
+df<-data.frame(ds=as.Date(as.yearmon(time(trainS))),y=as.matrix(trainS) )
+testdf<-data.frame(ds=as.Date(as.yearmon(time(test))),y=as.matrix(test) )
+fitProphet<-prophet(df,yearly.seasonality = T,weekly.seasonality = T)
+future <- make_future_dataframe(fitProphet,periods = hS,freq = "month", include_history = T)
+p <- predict(fitProphet,future)
+p<-p[,c("ds","yhat","yhat_lower","yhat_upper")]
+plot(fitProphet,p)
+
+```
+
+
+```{r, echo=FALSE}
+
+pred<-tail(p,h)
+pred$y<-testdf$y
+
+
+ggplot(pred, aes(x=ds, y=yhat)) +
+   geom_line(size=1, alpha=0.8) +
+   geom_ribbon(aes(ymin=yhat_lower, ymax=yhat_upper), fill="blue", alpha=0.2) +
+   geom_line(data=pred, aes(x=ds, y=y),color="red")
+
+
+```
+Como se puede observar, el ARIMA tuvo una mejor prediccion.
+```{r, echo=FALSE}
+
+library(shiny)
+library(shinydashboard)
+
+ui <- dashboardPage(
+  skin="purple",
+  dashboardHeader(title = "LAB9"),
+  dashboardSidebar(disable = TRUE),
+  dashboardBody(
+    # Boxes need to be put in a row (or column)
+    fluidRow(
+      box(plotlyOutput("plot1", height = 500, width = 600)),
+      box(plotlyOutput("plot2", height = 500, width = 600)),
+      box(plotlyOutput("plot3", height = 500, width = 600)),
+      box(plotlyOutput("plot4", height = 500, width = 600)),
+
+   
+    )
+  )
+)
+
+server <- function(input, output) {
+
+
+  output$plot1 <- renderPlotly({
+    fig44<-fig4
+  })
+  output$plot2 <- renderPlotly({
+    fig42<-fig2
+  })
+   output$plot3 <- renderPlotly({
+    fig41<-fig1
+  })
+   
+   output$plot4 <- renderPlotly({
+    fig45<-fig5
+  })
+}
+
+shinyApp(ui, server)
+
+
+
+
+```
+
